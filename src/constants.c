@@ -345,6 +345,29 @@ static int luv_constants(lua_State* L) {
   lua_pushinteger(L, UV_PIPE_NO_TRUNCATE);
   lua_setfield(L, -2, "PIPE_NO_TRUNCATE");
 #endif
+
+#if LUV_UV_VERSION_GEQ(1, 2, 0)
+  lua_pushinteger(L, UV_TTY_MODE_NORMAL);
+  lua_setfield(L, -2, "TTY_MODE_NORMAL");
+  lua_pushinteger(L, UV_TTY_MODE_RAW);
+  lua_setfield(L, -2, "TTY_MODE_RAW");
+  lua_pushinteger(L, UV_TTY_MODE_IO);
+  lua_setfield(L, -2, "TTY_MODE_IO");
+#endif
+
+#if LUV_UV_VERSION_GEQ(1, 48, 0)
+  lua_pushinteger(L, UV_THREAD_PRIORITY_HIGHEST);
+  lua_setfield(L, -2, "THREAD_PRIORITY_HIGHEST");
+  lua_pushinteger(L, UV_THREAD_PRIORITY_ABOVE_NORMAL);
+  lua_setfield(L, -2, "THREAD_PRIORITY_ABOVE_NORMAL");
+  lua_pushinteger(L, UV_THREAD_PRIORITY_NORMAL);
+  lua_setfield(L, -2, "THREAD_PRIORITY_NORMAL");
+  lua_pushinteger(L, UV_THREAD_PRIORITY_BELOW_NORMAL);
+  lua_setfield(L, -2, "THREAD_PRIORITY_BELOW_NORMAL");
+  lua_pushinteger(L, UV_THREAD_PRIORITY_LOWEST);
+  lua_setfield(L, -2, "THREAD_PRIORITY_LOWEST");
+#endif
+
   return 1;
 }
 

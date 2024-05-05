@@ -392,6 +392,10 @@ static const luaL_Reg luv_functions[] = {
   {"thread_setaffinity", luv_thread_setaffinity},
   {"thread_getcpu", luv_thread_getcpu},
 #endif
+#if LUV_UV_VERSION_GEQ(1, 48, 0)
+  {"thread_getpriority", luv_thread_getpriority},
+  {"thread_setpriority", luv_thread_setpriority},
+#endif
 
   // work.c
   {"new_work", luv_new_work},
@@ -670,9 +674,8 @@ static void luv_req_init(lua_State* L) {
   lua_setfield(L, -2, "__index");
   lua_pop(L, 1);
 
-  // Only used for things that need to be garbage collected
-  // (e.g. the req when using uv_fs_scandir)
-  luaL_newmetatable(L, "uv_fs");
+  // Only used for luv_fs_scandir_t
+  luaL_newmetatable(L, "uv_fs_scandir");
   lua_pushcfunction(L, luv_req_tostring);
   lua_setfield(L, -2, "__tostring");
   luaL_newlib(L, luv_req_methods);
@@ -706,7 +709,8 @@ LUALIB_API int luv_cfpcall(lua_State* L, int nargs, int nresult, int flags) {
     break;
   case LUA_ERRMEM:
     if ((flags & LUVF_CALLBACK_NOERRMSG) == 0)
-      fprintf(stderr, "System Error: %s\n", lua_tostring(L, -1));
+      fprintf(stderr, "System Error: %s\n",
+              luaL_tolstring(L, lua_absindex(L, -1), NULL));
     if ((flags & LUVF_CALLBACK_NOEXIT) == 0)
       exit(-1);
     lua_pop(L, 1);
@@ -716,7 +720,8 @@ LUALIB_API int luv_cfpcall(lua_State* L, int nargs, int nresult, int flags) {
   case LUA_ERRERR:
   default:
     if ((flags & LUVF_CALLBACK_NOERRMSG) == 0)
-      fprintf(stderr, "Uncaught Error: %s\n", lua_tostring(L, -1));
+      fprintf(stderr, "Uncaught Error: %s\n",
+              luaL_tolstring(L, lua_absindex(L, -1), NULL));
     if ((flags & LUVF_CALLBACK_NOEXIT) == 0)
       exit(-1);
     lua_pop(L, 1);

@@ -171,6 +171,20 @@ return require('lib/tap')(function (test)
     assert(req)
   end)
 
+  -- this previously hit a use-after-free
+  -- see https://github.com/luvit/luv/pull/696
+  test("fs.scandir given to new_work", function(print, p, expect, uv)
+    local req = assert(uv.fs_scandir('.'))
+    local work
+    work = assert(uv.new_work(function(_entries)
+      local _uv = require('luv')
+      while true do
+        if not _uv.fs_scandir_next(_entries) then break end
+      end
+    end, function() end))
+    work:queue(req)
+  end)
+
   test("fs.realpath", function (print, p, expect, uv)
     p(assert(uv.fs_realpath('.')))
     assert(uv.fs_realpath('.', expect(function (err, path)
@@ -267,6 +281,24 @@ return require('lib/tap')(function (test)
         uv.fs_closedir(dir)
       end
     end
+  end, "1.28.0")
+
+  test("fs.{open,read,close}dir ref check", function(print, p, expect, uv)
+    local dir = assert(uv.fs_opendir('.', nil, 50))
+
+    local function readdir_cb(err, dirs)
+      assert(not err)
+      if dirs then
+        p(dirs)
+      end
+    end
+
+    uv.fs_readdir(dir, readdir_cb)
+    dir = nil
+    collectgarbage()
+    collectgarbage()
+    collectgarbage()
+
   end, "1.28.0")
 
   test("fs.statfs sync", function (print, p, expect, uv)

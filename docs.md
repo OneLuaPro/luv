@@ -779,7 +779,7 @@ end)
 Creates and initializes a new `uv_prepare_t`. Returns the Lua userdata wrapping
 it.
 
-**Returns:** `uv_prepare_t userdata` or `fail`
+**Returns:** `uv_prepare_t userdata`
 
 ### `uv.prepare_start(prepare, callback)`
 
@@ -825,7 +825,7 @@ end)
 Creates and initializes a new `uv_check_t`. Returns the Lua userdata wrapping
 it.
 
-**Returns:** `uv_check_t userdata` or `fail`
+**Returns:** `uv_check_t userdata`
 
 ### `uv.check_start(check, callback)`
 
@@ -878,7 +878,7 @@ end)
 Creates and initializes a new `uv_idle_t`. Returns the Lua userdata wrapping
 it.
 
-**Returns:** `uv_idle_t userdata` or `fail`
+**Returns:** `uv_idle_t userdata`
 
 ### `uv.idle_start(idle, callback)`
 
@@ -922,14 +922,14 @@ end)
 async:send()
 ```
 
-### `uv.new_async([callback])`
+### `uv.new_async(callback)`
 
 **Parameters:**
-- `callback`: `callable` or `nil`
+- `callback`: `callable`
   - `...`: `threadargs` passed to/from `uv.async_send(async, ...)`
 
 Creates and initializes a new `uv_async_t`. Returns the Lua userdata wrapping
-it. A `nil` callback is allowed.
+it.
 
 **Returns:** `uv_async_t userdata` or `fail`
 
@@ -1235,10 +1235,11 @@ end)
 
 The `options` table accepts the following fields:
 
-  - `options.args` - Command line arguments as a list of string. The first
-  string should be the path to the program. On Windows, this uses CreateProcess
-  which concatenates the arguments into a string. This can cause some strange
-  errors. (See `options.verbatim` below for Windows.)
+  - `options.args` - Command line arguments as a list of strings. The first
+  string should *not* be the path to the program, since that is already
+  provided via `path`. On Windows, this uses CreateProcess which concatenates
+  the arguments into a string. This can cause some strange errors
+  (see `options.verbatim` below for Windows).
   - `options.stdio` - Set the file descriptors that will be made available to
   the child process. The convention is that the first entries are stdin, stdout,
   and stderr. (**Note**: On Windows, file descriptors after the third are
@@ -1279,7 +1280,7 @@ When the child process exits, `on_exit` is called with an exit code and signal.
 
 **Parameters:**
 - `process`: `uv_process_t userdata`
-- `signum`: `integer` or `string`
+- `signum`: `integer` or `string` or `nil` (default: `sigterm`)
 
 Sends the specified signal to the given process handle. Check the documentation
 on `uv_signal_t` for signal support, specially on Windows.
@@ -1290,7 +1291,7 @@ on `uv_signal_t` for signal support, specially on Windows.
 
 **Parameters:**
 - `pid`: `integer`
-- `signum`: `integer` or `string`
+- `signum`: `integer` or `string` or `nil` (default: `sigterm`)
 
 Sends the specified signal to the given PID. Check the documentation on
 `uv_signal_t` for signal support, specially on Windows.
@@ -1959,7 +1960,7 @@ Bind the pipe to a file path (Unix) or a name (Windows).
 `Flags`:
 
 - If `type(flags)` is `number`, it must be `0` or `uv.constants.PIPE_NO_TRUNCATE`.
-- If `type(flags)` is `table`, it must be `{}` or `{ no_trunate = true|false }`.
+- If `type(flags)` is `table`, it must be `{}` or `{ no_truncate = true|false }`.
 - If `type(flags)` is `nil`, it use default value `0`.
 - Returns `EINVAL` for unsupported flags without performing the bind operation.
 
@@ -1990,7 +1991,7 @@ Connect to the Unix domain socket or the named pipe.
 `Flags`:
 
 - If `type(flags)` is `number`, it must be `0` or `uv.constants.PIPE_NO_TRUNCATE`.
-- If `type(flags)` is `table`, it must be `{}` or `{ no_trunate = true|false }`.
+- If `type(flags)` is `table`, it must be `{}` or `{ no_truncate = true|false }`.
 - If `type(flags)` is `nil`, it use default value `0`.
 - Returns `EINVAL` for unsupported flags without performing the bind operation.
 
@@ -3406,6 +3407,43 @@ the number to correspond with the table keys used in `uv.thread_getaffinity` and
 
 **Returns:** `integer` or `fail`
 
+### `uv.thread_setpriority(thread, priority)`
+
+> method form `thread:setpriority(priority)`
+
+**Parameters:**
+- `thread`: `luv_thread_t userdata`
+- `priority`: ``number`
+
+Sets the specified thread's scheduling priority setting. It requires elevated
+privilege to set specific priorities on some platforms.
+
+The priority can be set to the following constants.
+
+- uv.constants.THREAD_PRIORITY_HIGHEST
+- uv.constants.THREAD_PRIORITY_ABOVE_NORMAL
+- uv.constants.THREAD_PRIORITY_NORMAL
+- uv.constants.THREAD_PRIORITY_BELOW_NORMAL
+- uv.constants.THREAD_PRIORITY_LOWEST
+
+**Returns:** `boolean` or `fail`
+
+### `uv.thread_getpriority(thread)
+
+> method form `thread:getpriority()`
+
+**Parameters:**
+- `thread`: `luv_thread_t userdata`
+
+Gets the  thread's priority setting.
+
+Retrieves the scheduling priority of the specified thread. The returned priority
+value is platform dependent.
+
+For Linux, when schedule policy is SCHED_OTHER (default), priority is 0.
+
+**Returns:** `number` or `fail`
+
 ### `uv.thread_self()`
 
 Returns the handle for the thread in which this is called.
@@ -3771,7 +3809,12 @@ Sets the environmental variable specified by `name` with the string `value`.
 
 **Warning:** This function is not thread safe.
 
-### `uv.os_unsetenv()`
+### `uv.os_unsetenv(name)`
+
+**Parameters:**
+- `name`: `string`
+
+Unsets the environmental variable specified by `name`.
 
 **Returns:** `boolean` or `fail`
 
