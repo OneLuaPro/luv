@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.28)
+cmake_minimum_required(VERSION 3.23)
 
 if(POLICY CMP0053)
   cmake_policy(SET CMP0053 NEW) # faster evaluation of variable references
