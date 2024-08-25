@@ -222,6 +222,10 @@ return require('lib/tap')(function (test)
             local source_addr = addr.ip
             assert(server:set_membership(multicast_addr, interface_addr, "leave"))
             _, err, errname = server:set_source_membership(multicast_addr, interface_addr, source_addr, "join")
+            -- handle 'EBUSY' error accidentally on macOS macOS CI, see https://github.com/luvit/luv/issues/704
+            while errname == 'EBUSY' do
+              _, err, errname = server:set_source_membership(multicast_addr, interface_addr, source_addr, "join")
+            end
             if errname == "ENOSYS" then
               -- not all systems support set_source_membership, so rejoin the previous group and continue on
               assert(server:set_membership(multicast_addr, interface_addr, "join"))
