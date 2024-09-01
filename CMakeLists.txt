@@ -27,6 +27,7 @@ if(liblua_FOUND)
   set(BUILD_MODULE OFF)
   set(BUILD_STATIC_LIBS OFF)
   set(BUILD_SHARED_LIBS ON)	# we want shared libs for OneLuaPro
+  set(DO_HEADER_INSTALL OFF)	# don't need headers for OneLuaPro
   set(LUA_BUILD_TYPE "System")
   set(WITH_SHARED_LIBUV OFF)
 else()
@@ -38,16 +39,23 @@ endif()
 #
 # Installation prefix directory - automatically set from find_package()
 # Needs to be defined before project definition statement - for whatever reason
-set(CMAKE_INSTALL_PREFIX ${LIBLUA_INSTALLDIR})
-#
-# Lua-specific installation dirs
-set(INSTALL_DOCDIR ${LIBLUA_INSTALLDIR}/share/doc
-  CACHE PATH "Installation directory for documentation")
-set(INSTALL_LUV_CDIR
-  ${LIBLUA_LIBDIR}/lua/${liblua_VERSION_MAJOR}.${liblua_VERSION_MINOR})
+if(NOT CMAKE_INSTALL_PREFIX)
+  set(CMAKE_INSTALL_PREFIX ${LIBLUA_INSTALLDIR})
+endif()
 # ------------------------------------------------------------------------------
 
 project (luv C ASM)
+
+# ------------------------------------------------------------------------------
+# Lua-specific installation dirs
+include (GNUInstallDirs)
+set(INSTALL_LIBDIR
+  ${CMAKE_INSTALL_LIBDIR} CACHE PATH "Installation directory for libraries")
+set(INSTALL_DOCDIR
+  ${CMAKE_INSTALL_DOCDIR} CACHE PATH "Installation directory for documentation")
+set(INSTALL_LUV_CDIR
+  ${INSTALL_LIBDIR}/lua/${liblua_VERSION_MAJOR}.${liblua_VERSION_MINOR})
+# ------------------------------------------------------------------------------
 
 set(LUV_VERSION_MAJOR 1)
 set(LUV_VERSION_MINOR 48)
@@ -391,14 +399,15 @@ if (CMAKE_INSTALL_PREFIX)
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc
         DESTINATION ${SHAREDLIBS_INSTALL_LIB_DIR}/pkgconfig)
     endif()
-    install(
-      FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
-      DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}"
-    )
+    if(DO_HEADER_INSTALL)
+      install(
+	FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
+	DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}")
+    endif()
   endif (BUILD_SHARED_LIBS)
   # --------------------------------------------------------------------------
   # Install examples
-  install(FILES docs.md DESTINATION ${INSTALL_DOCDIR}/${PROJECT_NAME})
+  install(FILES docs.pdf DESTINATION ${INSTALL_DOCDIR}/${PROJECT_NAME})
   install(DIRECTORY examples DESTINATION ${INSTALL_DOCDIR}/${PROJECT_NAME})
   # --------------------------------------------------------------------------
 endif (CMAKE_INSTALL_PREFIX)
