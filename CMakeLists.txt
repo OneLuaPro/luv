@@ -58,8 +58,8 @@ set(INSTALL_LUV_CDIR
 # ------------------------------------------------------------------------------
 
 set(LUV_VERSION_MAJOR 1)
-set(LUV_VERSION_MINOR 48)
-set(LUV_VERSION_PATCH 0)
+set(LUV_VERSION_MINOR 49)
+set(LUV_VERSION_PATCH 1)
 set(LUV_VERSION ${LUV_VERSION_MAJOR}.${LUV_VERSION_MINOR}.${LUV_VERSION_PATCH})
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.5.0")
