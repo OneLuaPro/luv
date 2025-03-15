@@ -210,7 +210,7 @@ lowercase option strings are listed below.
 
 In libuv, errors are represented by negative numbered constants. While these
 constants are made available in the `uv.errno` table, they are not returned by
-luv funtions and the libuv functions used to handle them are not exposed.
+luv functions and the libuv functions used to handle them are not exposed.
 Instead, if an internal error is encountered, the failing luv function will
 return to the caller an assertable `nil, err, name` tuple:
 
@@ -2464,6 +2464,54 @@ completed immediately.
 
 **Returns:** `integer` or `fail`
 
+### `uv.udp_try_send2(udp, messages, flags)`
+
+> method form `udp:try_send2(messages, flags)`
+
+**Parameters:**
+- `udp`: `uv_udp_t userdata`
+- `messages`: `table`
+  - `[1, 2, 3, ..., n]` : `table`
+    - `data` : `buffer`
+    - `addr` : `table`
+      - `ip` : `string`
+      - `port` : `integer`
+- `flags`: `nil` (see below)
+- `port`: `integer`
+
+Like `uv.udp_try_send()`, but can send multiple datagrams.
+Lightweight abstraction around `sendmmsg(2)`, with a `sendmsg(2)` fallback loop
+for platforms that do not support the former. The `udp` handle must be fully
+initialized, either from a `uv.udp_bind` call, another call that will bind
+automatically (`udp_send`, `udp_try_send`, etc), or from `uv.udp_connect`.
+
+`messages` should be an array-like table, where `addr` must be specified
+if the `udp` has not been connected via `udp_connect`. Otherwise, `addr`
+must be `nil`.
+
+`flags` is reserved for future extension and must currently be `nil` or `0` or
+`{}`.
+
+Returns the number of messages sent successfully. An error will only be returned
+if the first datagram failed to be sent.
+
+**Returns:** `integer` or `fail`
+
+```lua
+-- If client:connect(...) was not called
+local addr = { ip = "127.0.0.1", port = 1234 }
+client:try_send2({
+  { data = "Message 1", addr = addr },
+  { data = "Message 2", addr = addr },
+})
+
+-- If client:connect(...) was called
+client:try_send2({
+  { data = "Message 1" },
+  { data = "Message 2" },
+})
+```
+
 ### `uv.udp_recv_start(udp, callback)`
 
 > method form `udp:recv_start(callback)`
@@ -3399,7 +3447,7 @@ looked up using the `getprotobyname(3)` function. Examples: `"ip"`, `"icmp"`,
   - `port`: `integer` or `nil`
   - `family`: `string` or `integer` or `nil`
 - `callback`: `callable` (async version) or `nil` (sync version)
-  - `err`: `nil` or `sring`
+  - `err`: `nil` or `string`
   - `host`: `string` or `nil`
   - `service`: `string` or `nil`
 
@@ -3563,6 +3611,41 @@ Waits for the `thread` to finish executing its entry function.
 
 **Returns:** `boolean` or `fail`
 
+### `uv.thread_detach(thread)`
+
+> method form `thread:detach()`
+
+**Parameters:**
+- `thread`: `luv_thread_t userdata`
+
+Detaches a thread. Detached threads automatically release their resources upon
+termination, eliminating the need for the application to call `uv.thread_join`.
+
+**Returns:** `boolean` or `fail`
+
+### `uv.thread_setname(name)`
+
+**Parameters:**
+- `name`: `string`
+
+Sets the name of the current thread. Different platforms define different limits
+on the max number of characters a thread name can be: Linux, IBM i (16), macOS
+(64), Windows (32767), and NetBSD (32), etc. The name will be truncated
+if `name` is larger than the limit of the platform.
+
+**Returns:** `0` or `fail`
+
+### `uv.thread_getname(thread)`
+
+> method form `thread:getname()`
+
+**Parameters:**
+- `thread`: `luv_thread_t userdata`
+
+Gets the name of the thread specified by `thread`.
+
+**Returns:** `string` or `fail`
+
 ### `uv.sleep(msec)`
 
 **Parameters:**
@@ -3651,6 +3734,36 @@ Returns the resident set size (RSS) for the current process.
 ### `uv.getrusage()`
 
 Returns the resource usage.
+
+**Returns:** `table` or `fail`
+- `utime` : `table` (user CPU time used)
+  - `sec` : `integer`
+  - `usec` : `integer`
+- `stime` : `table` (system CPU time used)
+  - `sec` : `integer`
+  - `usec` : `integer`
+- `maxrss` : `integer` (maximum resident set size)
+- `ixrss` : `integer` (integral shared memory size)
+- `idrss` : `integer` (integral unshared data size)
+- `isrss` : `integer` (integral unshared stack size)
+- `minflt` : `integer` (page reclaims (soft page faults))
+- `majflt` : `integer` (page faults (hard page faults))
+- `nswap` : `integer` (swaps)
+- `inblock` : `integer` (block input operations)
+- `oublock` : `integer` (block output operations)
+- `msgsnd` : `integer` (IPC messages sent)
+- `msgrcv` : `integer` (IPC messages received)
+- `nsignals` : `integer` (signals received)
+- `nvcsw` : `integer` (voluntary context switches)
+- `nivcsw` : `integer` (involuntary context switches)
+
+### `uv.getrusage_thread()`
+
+Gets the resource usage measures for the calling thread.
+
+**Note** Not supported on all platforms. May return `ENOTSUP`.
+On macOS and Windows not all fields are set (the unsupported fields are filled
+with zeroes).
 
 **Returns:** `table` or `fail`
 - `utime` : `table` (user CPU time used)
@@ -4063,7 +4176,7 @@ These string utilities are needed internally for dealing with Windows, and are e
 
 ### `uv.utf16_length_as_wtf8(utf16)`
 
-Get the length (in bytes) of a UTF-16 (or UCS-2) string `utf16` value after converting it to WTF-8.
+Get the length (in bytes) of a UTF-16 (or UCS-2) string `utf16` value after converting it to WTF-8. The endianness of the UTF-16 (or UCS-2) string is assumed to be the same as the native endianness of the platform.
 
 **Parameters:**
 - `utf16`: `string`
@@ -4072,7 +4185,7 @@ Get the length (in bytes) of a UTF-16 (or UCS-2) string `utf16` value after conv
 
 ### `uv.utf16_to_wtf8(utf16)`
 
-Convert UTF-16 (or UCS-2) string `utf16` to WTF-8 string.
+Convert UTF-16 (or UCS-2) string `utf16` to WTF-8 string. The endianness of the UTF-16 (or UCS-2) string is assumed to be the same as the native endianness of the platform.
 
 **Parameters:**
 - `utf16`: `string`
@@ -4090,7 +4203,7 @@ Get the length (in UTF-16 code units) of a WTF-8 `wtf8` value after converting i
 
 ### `uv.wtf8_to_utf16(wtf8)`
 
-Convert WTF-8 string in `wtf8` to UTF-16 (or UCS-2) string.
+Convert WTF-8 string in `wtf8` to UTF-16 (or UCS-2) string. The endianness of the UTF-16 (or UCS-2) string will be the same as the native endianness of the platform.
 
 **Parameters:**
 - `wtf8`: `string`

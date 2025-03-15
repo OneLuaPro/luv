@@ -46,9 +46,9 @@ return require('lib/tap')(function (test)
     local delay = 100
     uv.update_time()
     local before = uv.now()
-    print('Runing', uv.thread_self())
+    print('Running', uv.thread_self())
     uv.sleep(delay)
-    print('Runing', uv.thread_self())
+    print('Running', uv.thread_self())
     uv.update_time()
     local elapsed = uv.now() - before
     p({
@@ -62,14 +62,19 @@ return require('lib/tap')(function (test)
     local delay = 100
     uv.update_time()
     local before = uv.now()
-    local args = {delay, 'string', nil, false, 5, "helloworld"}
+    local args = {delay, 'string', nil, false, 5, 3.14, "helloworld"}
     local unpack = unpack or table.unpack
-    uv.new_thread({stack_size=0}, function(delay,s,null,bool,five,hw)
+    uv.new_thread({stack_size=0}, function(delay,s,null,bool,five,pi,hw)
       assert(type(delay) == "number")
       assert(type(s) == "string")
       assert(null == nil)
       assert(bool == false)
       assert(five == 5)
+      assert(tostring(five) == '5', 'invalid integer to string ('..tostring(five)..')')
+      if math.type then
+        assert(math.type(five) == 'integer', 'invalid integer')
+      end
+      assert(pi == 3.14, 'invalid decimal number')
       assert(hw == 'helloworld')
       require('luv').sleep(delay)
     end, unpack(args)):join()
@@ -177,4 +182,24 @@ return require('lib/tap')(function (test)
     print('priority after change', priority)
     thread:join()
   end, "1.48.0")
+
+  test("getname, setname", function(_, p, _, uv)
+    local thread = uv.new_thread(function()
+      local _uv = require('luv')
+
+      local self = _uv.thread_self()
+      local name = "abc"
+      assert(_uv.thread_setname(name))
+      local new_name = _uv.thread_getname(self)
+      assert(new_name == name, 'unexpected name: '..tostring(new_name))
+    end)
+    thread:join()
+  end, "1.50.0")
+
+  test("detach", function(_, p, _, uv)
+    local thread = uv.new_thread(function(...)
+      print(table.concat({...}, ' ') .. ' from detached thread')
+    end, 'hello', 'world')
+    thread:detach()
+  end, "1.50.0")
 end)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.10)
 
 if(POLICY CMP0053)
   cmake_policy(SET CMP0053 NEW) # faster evaluation of variable references
@@ -58,8 +58,8 @@ set(INSTALL_LUV_CDIR
 # ------------------------------------------------------------------------------
 
 set(LUV_VERSION_MAJOR 1)
-set(LUV_VERSION_MINOR 49)
-set(LUV_VERSION_PATCH 1)
+set(LUV_VERSION_MINOR 50)
+set(LUV_VERSION_PATCH 0)
 set(LUV_VERSION ${LUV_VERSION_MAJOR}.${LUV_VERSION_MINOR}.${LUV_VERSION_PATCH})
 
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.5.0")
@@ -99,7 +99,7 @@ endif (NOT WITH_LUA_ENGINE)
 
 if (NOT LUA_BUILD_TYPE)
   set(LUA_BUILD_TYPE "Static"
-    CACHE STRING "Build Lua/LuaJIT as static, dynamic libary, or use system one" FORCE)
+    CACHE STRING "Build Lua/LuaJIT as static, dynamic library, or use system one" FORCE)
   set_property(CACHE LUA_BUILD_TYPE
     PROPERTY STRINGS  "Static;Dynamic;System")
 endif (NOT LUA_BUILD_TYPE)
@@ -217,6 +217,7 @@ else (LUA)
     else(USE_LUAJIT)
       include(deps/lua.cmake)
       set(LUA_INCLUDE_DIR deps/lua)
+      set(LUA_LIBRARIES lualib)
     endif (USE_LUAJIT)
     include_directories(${LUA_INCLUDE_DIR})
     set(LUA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${LUA_INCLUDE_DIR})
@@ -304,6 +305,17 @@ include_directories(${LUA_COMPAT53_DIR}/c-api)
 if(WIN32)
   add_definitions(-DLUA_BUILD_AS_DLL -DLUA_LIB)
 endif()
+
+add_executable(test EXCLUDE_FROM_ALL src/test.c src/luv.c)
+# Need to link Lua/LuaJIT libraries on non-Windows for the test executable
+if ((LUAJIT_LIBRARIES OR LUA_LIBRARIES) AND NOT (WIN32 OR CYGWIN))
+  if(USE_LUAJIT)
+    target_link_libraries(test ${LUAJIT_LIBRARIES})
+  else()
+    target_link_libraries(test ${LUA_LIBRARIES})
+  endif()
+endif()
+list(APPEND ACTIVE_TARGETS "test")
 
 foreach(TARGET_NAME ${ACTIVE_TARGETS})
   if(WIN32 OR CYGWIN)

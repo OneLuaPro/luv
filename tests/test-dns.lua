@@ -33,7 +33,7 @@ return require('lib/tap')(function (test)
     assert(res[1].port == 80)
   end, "1.3.0")
 
-  test("Get only ipv4 tcp adresses for luvit.io", function (print, p, expect, uv)
+  test("Get only ipv4 tcp addresses for luvit.io", function (print, p, expect, uv)
     assert(uv.getaddrinfo("luvit.io", nil, {
       socktype = "stream",
       family = "inet",
@@ -48,9 +48,9 @@ return require('lib/tap')(function (test)
     end)))
   end)
 
-  -- FIXME: this test always fails on AppVeyor for some reason
-  if isWindows and not os.getenv'APPVEYOR' then
-    test("Get only ipv6 tcp adresses for luvit.io", function (print, p, expect, uv)
+  -- FIXME: this test always fails on Windows/AppVeyor with ENOENT for some reason
+  if not isWindows then
+    test("Get only ipv6 tcp addresses for luvit.io", function (print, p, expect, uv)
       assert(uv.getaddrinfo("luvit.io", nil, {
         socktype = "stream",
         family = "inet6",
@@ -66,7 +66,7 @@ return require('lib/tap')(function (test)
     end)
   end
 
-  test("Get ipv4 and ipv6 tcp adresses for luvit.io", function (print, p, expect, uv)
+  test("Get ipv4 and ipv6 tcp addresses for luvit.io", function (print, p, expect, uv)
     assert(uv.getaddrinfo("luvit.io", nil, {
       socktype = "stream",
     }, expect(function (err, res)
@@ -80,7 +80,7 @@ return require('lib/tap')(function (test)
     end)))
   end)
 
-  test("Get all adresses for luvit.io", function (print, p, expect, uv)
+  test("Get all addresses for luvit.io", function (print, p, expect, uv)
     assert(uv.getaddrinfo("luvit.io", nil, nil, expect(function (err, res)
       if errorAllowed(err) then
         print(err, "skipping")
