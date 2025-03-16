@@ -14,6 +14,11 @@
  *  limitations under the License.
  *
  */
+#if _MSC_VER && !__INTEL_COMPILER	// https://stackoverflow.com/questions/5850358
+#pragma warning( disable : 4244 )
+#pragma warning( disable : 4018 )
+#pragma warning( disable : 4267 )
+#endif
 
 #include <lua.h>
 #if (LUA_VERSION_NUM < 503)

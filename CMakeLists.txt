@@ -1,67 +1,16 @@
 cmake_minimum_required(VERSION 3.10)
 
-if(POLICY CMP0053)
-  cmake_policy(SET CMP0053 NEW) # faster evaluation of variable references
-endif()
-
-# ------------------------------------------------------------------------------
-# find OneLuaPro's liblua installation and version info
-if(NOT LUA_HINTS)
-  if(WIN32)
-    set(LUA_HINTS "c:/Apps")
-  endif()
-endif()
-find_package(liblua REQUIRED CONFIG HINTS ${LUA_HINTS})
-if(liblua_FOUND)
-  message(STATUS "liblua version        : ${liblua_VERSION}")
-  message(STATUS "liblua install prefix : ${LIBLUA_INSTALLDIR}")
-  message(STATUS "liblua include dir    : ${LIBLUA_INCLUDEDIR}")
-  message(STATUS "liblua lib dir        : ${LIBLUA_LIBDIR}")
-  # set luv's own CMake variables accordingly
-  set(LUA ${LIBLUA_INSTALLDIR}/lua.exe)
-  set(LUA_LIBDIR ${LIBLUA_LIBDIR})
-  set(LUA_INCDIR ${LIBLUA_INCLUDEDIR})
-  set(LUA_LIBFILE liblua.lib)
-  # other vars
-  set(WITH_LUA_ENGINE "Lua")
-  set(BUILD_MODULE OFF)
-  set(BUILD_STATIC_LIBS OFF)
-  set(BUILD_SHARED_LIBS ON)	# we want shared libs for OneLuaPro
-  set(DO_HEADER_INSTALL OFF)	# don't need headers for OneLuaPro
-  set(LUA_BUILD_TYPE "System")
-  set(WITH_SHARED_LIBUV OFF)
-else()
-  message(FATAL_ERROR "Unable to find liblua version ${liblua_VERSION}.")
-endif()
-# Note: liblua_VERSION is set by find_package() directly. LIBLUA_INSTALLDIR,
-# LIBLUA_INCLUDEDIR and LIBLUA_LIBDIR are set by libluaConfigVersion.cmake in
-# <prefix>/share/cmake/liblua.
-#
-# Installation prefix directory - automatically set from find_package()
-# Needs to be defined before project definition statement - for whatever reason
-if(NOT CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX ${LIBLUA_INSTALLDIR})
-endif()
-# ------------------------------------------------------------------------------
-
 project (luv C ASM)
-
-# ------------------------------------------------------------------------------
-# Lua-specific installation dirs
-include (GNUInstallDirs)
-set(INSTALL_LIBDIR
-  ${CMAKE_INSTALL_LIBDIR} CACHE PATH "Installation directory for libraries")
-set(INSTALL_DOCDIR
-  ${CMAKE_INSTALL_DOCDIR} CACHE PATH "Installation directory for documentation")
-set(INSTALL_LUV_CDIR
-  ${INSTALL_LIBDIR}/lua/${liblua_VERSION_MAJOR}.${liblua_VERSION_MINOR})
-# ------------------------------------------------------------------------------
 
 set(LUV_VERSION_MAJOR 1)
 set(LUV_VERSION_MINOR 50)
 set(LUV_VERSION_PATCH 0)
 set(LUV_VERSION ${LUV_VERSION_MAJOR}.${LUV_VERSION_MINOR}.${LUV_VERSION_PATCH})
 
+if (USE_ONELUAPRO)
+  # Use own CMakeFile instead of the original file
+  include (${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists-OneLuaPro.txt)
+else (USE_ONELUAPRO)
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.5.0")
     # generate compilation database used by C code intelligence tools
   set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -118,11 +67,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 if (WITH_SHARED_LIBUV)
   find_package(Libuv REQUIRED)
   include_directories(${LIBUV_INCLUDE_DIR})
-  # ----------------------------------------------------------------------------
-elseif (liblua_FOUND)
-  find_package(libuv REQUIRED CONFIG HINTS ${LUA_HINTS})
-  include_directories(${LIBUV_INCLUDE_DIR})
-  # ----------------------------------------------------------------------------
 else (WITH_SHARED_LIBUV)
   include_directories(deps/libuv/include)
   add_subdirectory(deps/libuv EXCLUDE_FROM_ALL)
@@ -276,12 +220,6 @@ if (BUILD_SHARED_LIBS)
       PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
   endif(APPLE)
   list(APPEND ACTIVE_TARGETS "libluv")
-  # ----------------------------------------------------------------------------
-  if(liblua_FOUND)
-    target_link_options(libluv PRIVATE /LIBPATH:${LIBLUA_LIBDIR}
-      libuv.lib ws2_32.lib Iphlpapi.lib Dbghelp.lib Userenv.lib)
-  endif()
-  # ----------------------------------------------------------------------------
 endif (BUILD_SHARED_LIBS)
 
 if(APPLE)
@@ -358,16 +296,10 @@ if (NOT LUA)
       CACHE PATH "Installation directory for shared libraries")
   endif (BUILD_SHARED_LIBS)
 else ()
-  # --------------------------------------------------------------------------
-  if(liblua_FOUND)
-    set(SHAREDLIBS_INSTALL_BIN_DIR "${INSTALL_LUV_CDIR}")
-  else()
-    # use paths from luaRocks
-    set(MODULE_INSTALL_LIB_DIR "${INSTALL_LIB_DIR}")
-    set(STATICLIBS_INSTALL_LIB_DIR "${INSTALL_LIB_DIR}")
-    set(SHAREDLIBS_INSTALL_LIB_DIR "${INSTALL_LIB_DIR}")
-  endif()
-  # --------------------------------------------------------------------------
+  # use paths from luaRocks
+  set(MODULE_INSTALL_LIB_DIR "${INSTALL_LIB_DIR}")
+  set(STATICLIBS_INSTALL_LIB_DIR "${INSTALL_LIB_DIR}")
+  set(SHAREDLIBS_INSTALL_LIB_DIR "${INSTALL_LIB_DIR}")
 endif ()
 
 # header install paths are LuaRocks-agnostic, so just use CMAKE_INSTALL_PREFIX regardless
@@ -411,15 +343,10 @@ if (CMAKE_INSTALL_PREFIX)
       install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libluv.pc
         DESTINATION ${SHAREDLIBS_INSTALL_LIB_DIR}/pkgconfig)
     endif()
-    if(DO_HEADER_INSTALL)
-      install(
-	FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
-	DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}")
-    endif()
+    install(
+      FILES src/luv.h src/util.h src/lhandle.h src/lreq.h
+      DESTINATION "${SHAREDLIBS_INSTALL_INC_DIR}"
+    )
   endif (BUILD_SHARED_LIBS)
-  # --------------------------------------------------------------------------
-  # Install examples
-  install(FILES docs.pdf DESTINATION ${INSTALL_DOCDIR}/${PROJECT_NAME})
-  install(DIRECTORY examples DESTINATION ${INSTALL_DOCDIR}/${PROJECT_NAME})
-  # --------------------------------------------------------------------------
 endif (CMAKE_INSTALL_PREFIX)
+endif (USE_ONELUAPRO)
