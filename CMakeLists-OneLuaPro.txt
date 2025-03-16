@@ -90,6 +90,9 @@ set_target_properties(luv
 target_include_directories(luv PRIVATE ${LIBLUA_INCLUDEDIR})
 # setup platform-specific sources, compile and linker options
 if(WIN32 AND NOT MinGW)
+  # important definitions, otherwise DLL not built correctly
+  # refers to luaconf.h and is used as LUALIB_API in luv (__declspec(dllexport))
+  add_definitions(-DLUA_BUILD_AS_DLL -DLUA_LIB)
   target_compile_options(luv PRIVATE /D_WINDLL /D_WIN32 /D_CRT_SECURE_NO_WARNINGS)
   target_link_options(luv PRIVATE /LIBPATH:${LIBLUA_LIBDIR}
     liblua.lib libuv.lib ws2_32.lib Iphlpapi.lib Dbghelp.lib Userenv.lib)
