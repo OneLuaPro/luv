@@ -6,7 +6,8 @@ local hare_id = uv.new_thread(function(step,...)
     local ffi = require'ffi'
     local uv = require('luv')
     local sleep 
-    if ffi.os=='Windows' then
+    -- if ffi.os=='Windows' then
+    if uv.os_uname().sysname == "Windows_NT" then
         ffi.cdef "void Sleep(int ms);"
         sleep = ffi.C.Sleep
     else 

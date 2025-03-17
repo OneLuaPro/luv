@@ -1,13 +1,14 @@
-local uv = require("uv")
+local uv = require("luv")
 
-local SOCK = "/tmp/echo.sock"
+-- local SOCK = "/tmp/echo.sock"
+local SOCK = "C:\\Temp"
 
 local server = uv.new_pipe(false)
 
 local ret, err, code = server:bind(SOCK)
 -- if file already exists, remove it first and try again
 if not ret and code == "EADDRINUSE" then
-  local fs = require("fs")
+  local fs = require("lfs")
   fs.unlinkSync(SOCK)
   _, err, _ = server:bind(SOCK)
   assert(not err, err)
