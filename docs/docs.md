@@ -203,6 +203,12 @@ lowercase option strings are listed below.
 - `TTY_MODE_NORMAL`: "normal"
 - `TTY_MODE_RAW`: "raw"
 - `TTY_MODE_IO`: "io"
+- `TTY_MODE_RAW_VT`: "raw_vt"
+
+### FS Modification Times
+
+- `FS_UTIME_NOW`: "now"
+- `FS_UTIME_OMIT`: "omit"
 
 ## Error Handling
 
@@ -1272,7 +1278,49 @@ a better job on Windows than it does on Unix.
 
 **Parameters:**
 - `path`: `string`
-- `options`: `table` (see below)
+- `options`: `table`
+  - `args`: `string[]` or `nil`
+    Command line arguments as a list of strings. The first
+    string should *not* be the path to the program, since that is already
+    provided via `path`. On Windows, this uses CreateProcess which concatenates
+    the arguments into a string. This can cause some strange errors
+    (see `options.verbatim` below for Windows).
+  - `stdio`: `table` or `nil`
+    Set the file descriptors that will be made available to
+    the child process. The convention is that the first entries are stdin, stdout,
+    and stderr.
+
+    The entries can take many shapes.
+    - If `integer`, then the child process inherits that same zero-indexed
+      fd from the parent process.
+    - If `uv_stream_t` handles are passed in, those are used as a read-write pipe
+      or inherited stream depending if the stream has a valid fd.
+    - If `nil`, means to ignore that fd in the child process.
+
+    **Note**: On Windows, file descriptors after the third are
+    available to the child process only if the child processes uses the MSVCRT
+    runtime.
+    - `[1, 2, 3, ..., n]`: `integer` or `userdata` for sub-type of `uv_stream_t` or `nil`
+  - `env`: `table` or `nil` Set environment variables for the new process.
+    - `[string]`: `string`
+  - `cwd`: `string` or `nil` Set the current working directory for the sub-process.
+  - `uid`: `string` or `nil` Set the child process' user id.
+  - `gid`: `string` or `nil` Set the child process' group id.
+  - `verbatim`: `boolean` or `nil`
+    If true, do not wrap any arguments in quotes, or
+    perform any other escaping, when converting the argument list into a command
+    line string. This option is only meaningful on Windows systems. On Unix it is
+    silently ignored.
+  - `detached`: `boolean` or `nil`
+    If true, spawn the child process in a detached state -
+    this will make it a process group leader, and will effectively enable the
+    child to keep running after the parent exits. Note that the child process
+    will still keep the parent's event loop alive unless the parent process calls
+    `uv.unref()` on the child's process handle.
+  - `hide`: `boolean` or `nil`
+    If true, hide the subprocess console window that would
+    normally be created. This option is only meaningful on Windows systems. On
+    Unix it is silently ignored.
 - `on_exit`: `callable`
   - `code`: `integer`
   - `signal`: `integer`
@@ -1330,43 +1378,6 @@ uv.shutdown(stdin, function()
   end)
 end)
 ```
-
-The `options` table accepts the following fields:
-
-  - `options.args` - Command line arguments as a list of strings. The first
-  string should *not* be the path to the program, since that is already
-  provided via `path`. On Windows, this uses CreateProcess which concatenates
-  the arguments into a string. This can cause some strange errors
-  (see `options.verbatim` below for Windows).
-  - `options.stdio` - Set the file descriptors that will be made available to
-  the child process. The convention is that the first entries are stdin, stdout,
-  and stderr. (**Note**: On Windows, file descriptors after the third are
-  available to the child process only if the child processes uses the MSVCRT
-  runtime.)
-  - `options.env` - Set environment variables for the new process.
-  - `options.cwd` - Set the current working directory for the sub-process.
-  - `options.uid` - Set the child process' user id.
-  - `options.gid` - Set the child process' group id.
-  - `options.verbatim` - If true, do not wrap any arguments in quotes, or
-  perform any other escaping, when converting the argument list into a command
-  line string. This option is only meaningful on Windows systems. On Unix it is
-  silently ignored.
-  - `options.detached` - If true, spawn the child process in a detached state -
-  this will make it a process group leader, and will effectively enable the
-  child to keep running after the parent exits. Note that the child process
-  will still keep the parent's event loop alive unless the parent process calls
-  `uv.unref()` on the child's process handle.
-  - `options.hide` - If true, hide the subprocess console window that would
-  normally be created. This option is only meaningful on Windows systems. On
-  Unix it is silently ignored.
-
-The `options.stdio` entries can take many shapes.
-
-  - If they are numbers, then the child process inherits that same zero-indexed
-  fd from the parent process.
-  - If `uv_stream_t` handles are passed in, those are used as a read-write pipe
-  or inherited stream depending if the stream has a valid fd.
-  - Including `nil` placeholders means to ignore that fd in the child process.
 
 When the child process exits, `on_exit` is called with an exit code and signal.
 
@@ -1632,9 +1643,12 @@ when the blocking mode is changed after write requests have already been
 submitted. Therefore it is recommended to set the blocking mode immediately
 after opening or creating the stream.
 
-### `uv.stream_get_write_queue_size()`
+### `uv.stream_get_write_queue_size(stream)`
 
 > method form `stream:get_write_queue_size()`
+
+**Parameters:**
+- `stream`: `userdata` for sub-type of `uv_stream_t`
 
 Returns the stream's write queue size.
 
@@ -2245,17 +2259,23 @@ calling `uv_udp_init_ex`.
 
 **Returns:** `uv_udp_t userdata` or `fail`
 
-### `uv.udp_get_send_queue_size()`
+### `uv.udp_get_send_queue_size(udp)`
 
 > method form `udp:get_send_queue_size()`
+
+**Parameters:**
+- `udp`: `uv_udp_t userdata`
 
 Returns the handle's send queue size.
 
 **Returns:** `integer`
 
-### `uv.udp_get_send_queue_count()`
+### `uv.udp_get_send_queue_count(udp)`
 
 > method form `udp:get_send_queue_count()`
+
+**Parameters:**
+- `udp`: `uv_udp_t userdata`
 
 Returns the handle's send queue count.
 
@@ -2600,17 +2620,23 @@ for changes.
 
 **Returns:** `0` or `fail`
 
-### `uv.fs_event_stop()`
+### `uv.fs_event_stop(fs_event)`
 
 > method form `fs_event:stop()`
+
+**Parameters:**
+- `fs_event`: `uv_fs_event_t userdata`
 
 Stop the handle, the callback will no longer be called.
 
 **Returns:** `0` or `fail`
 
-### `uv.fs_event_getpath()`
+### `uv.fs_event_getpath(fs_event)`
 
 > method form `fs_event:getpath()`
+
+**Parameters:**
+- `fs_event`: `uv_fs_event_t userdata`
 
 Get the path being monitored by the handle.
 
@@ -2653,17 +2679,23 @@ intervals will not detect all changes on many file systems.
 
 **Returns:** `0` or `fail`
 
-### `uv.fs_poll_stop()`
+### `uv.fs_poll_stop(fs_poll)`
 
 > method form `fs_poll:stop()`
+
+**Parameters:**
+- `fs_poll`: `uv_fs_poll_t userdata`
 
 Stop the handle, the callback will no longer be called.
 
 **Returns:** `0` or `fail`
 
-### `uv.fs_poll_getpath()`
+### `uv.fs_poll_getpath(fs_poll)`
 
 > method form `fs_poll:getpath()`
+
+**Parameters:**
+- `fs_poll`: `uv_fs_poll_t userdata`
 
 Get the path being monitored by the handle.
 
@@ -3209,49 +3241,73 @@ Equivalent to `fchmod(2)`.
 
 **Returns (async version):** `uv_fs_t userdata`
 
-### `uv.fs_utime(path, atime, mtime, [callback])`
+### `uv.fs_utime(path, [atime], [mtime], [callback])`
 
 **Parameters:**
 - `path`: `string`
-- `atime`: `number`
-- `mtime`: `number`
+- `atime`: `number` or `string` or `nil`
+- `mtime`: `number` or `string` or `nil`
 - `callback`: `callable` or `nil` (async if provided, sync if `nil`)
   - `err`: `nil` or `string`
   - `success`: `boolean` or `nil`
 
 Equivalent to `utime(2)`.
 
+See [Constants][] for supported FS Modification Time constants.
+
+Passing `"now"` or `uv.constants.FS_UTIME_NOW` as the atime or mtime sets the timestamp to the
+current time.
+
+Passing `nil`, `"omit"`, or `uv.constants.FS_UTIME_OMIT` as the atime or mtime leaves the timestamp
+untouched.
+
 **Returns (sync version):** `boolean` or `fail`
 
 **Returns (async version):** `uv_fs_t userdata`
 
-### `uv.fs_futime(fd, atime, mtime, [callback])`
+### `uv.fs_futime(fd, [atime], [mtime], [callback])`
 
 **Parameters:**
 - `fd`: `integer`
-- `atime`: `number`
-- `mtime`: `number`
+- `atime`: `number` or `string` or `nil`
+- `mtime`: `number` or `string` or `nil`
 - `callback`: `callable` or `nil` (async if provided, sync if `nil`)
   - `err`: `nil` or `string`
   - `success`: `boolean` or `nil`
 
-Equivalent to `futime(2)`.
+Equivalent to `futimes(3)`.
+
+See [Constants][] for supported FS Modification Time constants.
+
+Passing `"now"` or `uv.constants.FS_UTIME_NOW` as the atime or mtime sets the timestamp to the
+current time.
+
+Passing `nil`, `"omit"`, or `uv.constants.FS_UTIME_OMIT` as the atime or mtime leaves the timestamp
+untouched.
 
 **Returns (sync version):** `boolean` or `fail`
 
 **Returns (async version):** `uv_fs_t userdata`
 
-### `uv.fs_lutime(path, atime, mtime, [callback])`
+### `uv.fs_lutime(path, [atime], [mtime], [callback])`
 
 **Parameters:**
 - `path`: `string`
-- `atime`: `number`
-- `mtime`: `number`
+- `atime`: `number` or `string` or `nil`
+- `mtime`: `number` or `string` or `nil`
 - `callback`: `callable` or `nil` (async if provided, sync if `nil`)
   - `err`: `nil` or `string`
   - `success`: `boolean` or `nil`
 
-Equivalent to `lutime(2)`.
+Equivalent to `lutimes(3)`.
+
+See [Constants][] for supported FS Modification Time constants.
+
+Passing `"now"` or `uv.constants.FS_UTIME_NOW` as the atime or mtime sets the timestamp to the
+current time.
+
+Passing `nil`, `"omit"`, or `uv.constants.FS_UTIME_OMIT` as the atime or mtime leaves the timestamp
+untouched.
 
 **Returns (sync version):** `boolean` or `fail`
 
@@ -3793,6 +3849,63 @@ Gets the name of the thread specified by `thread`.
 Pauses the thread in which this is called for a number of milliseconds.
 
 **Returns:** Nothing.
+
+### `uv.new_sem([value])`
+
+**Parameters:**
+- `value`: `integer` or `nil`
+
+Creates a new semaphore with the specified initial value. A semaphore is safe to
+share across threads. It represents an unsigned integer value that can incremented
+and decremented atomically but any attempt to make it negative will "wait" until
+the value can be decremented by another thread incrementing it.
+
+The initial value must be a non-negative integer.
+
+**Returns:** `luv_sem_t userdata` or `fail`
+
+**Note**: A semaphore must be shared between threads, any `uv.sem_wait()` on a single thread that blocks will deadlock.
+
+### `uv.sem_post(sem)`
+
+> method form `sem:post()`
+
+**Parameters:**
+- `sem`: `luv_sem_t userdata`
+
+Increments (unlocks) a semaphore, if the semaphore's value consequently becomes
+greater than zero then another thread blocked in a sem_wait call will be woken
+and proceed to decrement the semaphore.
+
+**Returns:** Nothing.
+
+### `uv.sem_wait(sem)`
+
+> method form `sem:wait()`
+
+**Parameters:**
+- `sem`: `luv_sem_t userdata`
+
+Decrements (locks) a semaphore, if the semaphore's value is greater than zero
+then the value is decremented and the call returns immediately. If the semaphore's
+value is zero then the call blocks until the semaphore's value rises above zero or
+the call is interrupted by a signal.
+
+**Returns:** Nothing.
+
+### `uv.sem_trywait(sem)`
+
+> method form `sem:trywait()`
+
+**Parameters:**
+- `sem`: `luv_sem_t userdata`
+
+The same as `uv.sem_wait()` but returns immediately if the semaphore is not available.
+
+If the semaphore's value was decremented then `true` is returned, otherwise the semaphore
+has a value of zero and `false` is returned.
+
+**Returns:** `boolean`
 
 ## Miscellaneous utilities
 
