@@ -1381,7 +1381,8 @@ function uv.disable_stdio_inheritance() end
 --- @field stdio table<integer, integer|uv.uv_stream_t?>?
 ---
 --- Set environment variables for the new process.
---- @field env table<string, string>?
+--- Each entry should be a string in the form of `NAME=VALUE`.
+--- @field env string[]?
 ---
 --- Set the current working directory for the sub-process.
 --- @field cwd string?
@@ -4203,7 +4204,7 @@ function uv.setgid(id) end
 --- relative to an arbitrary time in the past. It is not related to the time of day
 --- and therefore not subject to clock drift. The primary use is for measuring
 --- time between intervals.
---- @return number
+--- @return integer
 function uv.hrtime() end
 
 --- Obtain the current system time from a high-resolution real-time or monotonic
