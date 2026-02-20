@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2025 Kritzel Kratzel.
+# Copyright (c) 2025-2026 The OneLuaPro project authors.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy of
 # this software and associated documentation files (the "Software"), to deal in 
@@ -88,19 +88,24 @@ set_target_properties(luv
   PROPERTIES VERSION ${LUV_VERSION} SOVERSION ${LUV_VERSION_MAJOR})
 # setup luainclude directory
 target_include_directories(luv PRIVATE ${LIBLUA_INCLUDEDIR})
+# plattform-independend sources
+target_sources(luv PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/luv.c)
 # setup platform-specific sources, compile and linker options
 if(WIN32 AND NOT MinGW)
-  # important definitions, otherwise DLL not built correctly
-  # refers to luaconf.h and is used as LUALIB_API in luv (__declspec(dllexport))
-  add_definitions(-DLUA_BUILD_AS_DLL -DLUA_LIB)
-  target_compile_options(luv PRIVATE /D_WINDLL /D_WIN32 /D_CRT_SECURE_NO_WARNINGS)
-  target_link_options(luv PRIVATE /LIBPATH:${LIBLUA_LIBDIR}
+  target_compile_definitions(luv PRIVATE
+    LUA_BUILD_AS_DLL
+    LUA_LIB
+    _WINDLL
+    _WIN32
+    _CRT_SECURE_NO_WARNINGS
+    _CRT_NONSTDC_NO_DEPRECATE
+  )
+  target_link_directories(luv PRIVATE ${LIBLUA_LIBDIR})
+  target_link_libraries(luv PRIVATE
     liblua.lib libuv.lib ws2_32.lib Iphlpapi.lib Dbghelp.lib Userenv.lib)
 else()
   message(FATAL_ERROR "Not yet fully implemented.")
 endif()
-# plattform-independend sources
-target_sources(luv PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/luv.c)
 # Install DLL and docs
 install(TARGETS luv RUNTIME DESTINATION ${INSTALL_TOP_CDIR})
 install(FILES docs.html DESTINATION ${INSTALL_DOCDIR})
