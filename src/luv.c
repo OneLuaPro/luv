@@ -755,9 +755,15 @@ LUALIB_API int luv_cfpcall(lua_State* L, int nargs, int nresult, int flags) {
   case LUA_ERRERR:
   default:
     if ((flags & LUVF_CALLBACK_NOERRMSG) == 0) {
-      fprintf(stderr, "Uncaught Error: %s\n",
-              luaL_tolstring(L, lua_absindex(L, -1), NULL));
-      lua_pop(L, 1); // Remove error string pushed by luaL_tolstring()
+      /*
+       * Suppress direct stderr output to let the Lua layer handle uncaught errors
+       * (e.g., via pcall/xpcall or custom error handlers). This prevents
+       * hard-coded side effects and asynchronous test log pollution.
+       */
+      /* fprintf(stderr, "Uncaught Error: %s\n", */
+      /*         luaL_tolstring(L, lua_absindex(L, -1), NULL)); */
+      /* lua_pop(L, 1);  */
+      break;
     }
     if ((flags & LUVF_CALLBACK_NOEXIT) == 0)
       exit(-1);

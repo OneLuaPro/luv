@@ -11,7 +11,12 @@ end)
 
 return require('lib/tap')(function (test)
 
-  if require('lib/utils').isWindows then return end
+  if require('lib/utils').isWindows then
+    test("Catch SIGINT (Windows)", function (print)
+      print("SKIPPED: Windows does not support POSIX-style SIGINT for automated PID-based signaling.")
+    end)
+    return
+  end
 
   test("Catch SIGINT", function (print, p, expect, uv)
     local child, pid
